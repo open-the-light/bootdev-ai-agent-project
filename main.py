@@ -1,30 +1,38 @@
 import os
 import sys
+import argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+def setup_command_line_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Gemini AI Agent Tool"
+    )
+
+    parser.add_argument("prompt", help="Prompt text (required)")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
+
+    return parser
+
 def main():
     load_dotenv()
     api_key = os.environ.get("GEMINI_API_KEY")
-
     client = genai.Client(api_key=api_key)
 
     messages = []
 
-    try:
-        user_prompt = sys.argv[1]
-    except Exception as e:
-        print("Enter your query as a command line argument please...")
-        sys.exit(1)
-    response = client.models.generate_content(model="gemini-2.0-flash-001",
-                                              contents=user_prompt)
+    parser = setup_command_line_parser()
+    args = parser.parse_args()
 
-    usage = response.usage_metadata
-
-    messages.append(types.Content(role="user", parts=[types.Part(text=user_prompt)]))
+    response = client.models.generate_content(model=args.prompt)
     print(response.text)
-    print(f"Prompt tokens: {usage.prompt_token_count}\nResponse tokens: {usage.candidates_token_count}") # type: ignore
+
+    if args.verbose: 
+        usage = response.usage_metadata
+        print(f"User prompt: {args.prompt}\nPrompt tokens: {usage.prompt_token_count}\nResponse tokens: {usage.candidates_token_count}") # type: ignore
+
+    messages.append(types.Content(role="user", parts=[types.Part(text=args.prompt)]))
 
 
 if __name__ == "__main__":
